@@ -1,0 +1,35 @@
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/frag_container"
+    android:layout_width="match_parent"
+    android:background="@color/black"
+    android:layout_height="match_parent"
+    android:clickable="true"
+    android:focusable="true"
+    tools:context="com.example.zemoso.assignment.activities.fragments.CameraFragment">
+   <TextureView
+       android:id="@+id/textureView"
+       android:layout_width="wrap_content"
+       android:layout_height="wrap_content"
+       android:layout_alignParentTop="true"
+       android:layout_alignParentStart="true"/>
+    <Chronometer
+        android:id="@+id/chronometer"
+        android:layout_above="@+id/record"
+        android:visibility="gone"
+        android:textSize="25sp"
+        android:textColor="@color/red"
+        android:layout_centerInParent="true"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content" />
+    <ImageButton
+        android:id="@+id/record"
+        android:layout_width="wrap_content"
+        android:layout_marginBottom="30dp"
+        android:layout_height="wrap_content"
+        android:layout_alignParentBottom="true"
+        android:layout_centerInParent="true"
+        android:src="@drawable/ic_fiber_manual_record_black_24dp"
+        />
+
+</RelativeLayout>

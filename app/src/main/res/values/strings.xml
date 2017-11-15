@@ -1,0 +1,7 @@
+<resources>
+    <string name="app_name">Assignment</string>
+
+    <string name="hello_blank_fragment">Hello blank fragment</string>
+    <string name="Comment_Place_Holder">add your comment here</string>
+    <string name="save">save</string>
+</resources>
