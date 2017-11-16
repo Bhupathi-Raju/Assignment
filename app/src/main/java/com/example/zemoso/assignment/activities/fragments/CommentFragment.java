@@ -1,17 +1,22 @@
 package com.example.zemoso.assignment.activities.fragments;
 
 
+import android.Manifest;
 import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.content.Context;
+import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
 import android.graphics.Color;
 import android.graphics.Rect;
+import android.os.Build;
 import android.os.Bundle;
 import android.os.Environment;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
+import android.support.v4.app.ActivityCompat;
 import android.support.v4.app.Fragment;
+import android.support.v4.content.ContextCompat;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
 import android.text.Editable;
@@ -27,6 +32,7 @@ import android.widget.EditText;
 import android.widget.ImageButton;
 import android.widget.RelativeLayout;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import com.example.zemoso.assignment.R;
 import com.example.zemoso.assignment.activities.adapters.ColorPickerAdapter;
@@ -48,6 +54,8 @@ import java.util.Locale;
 public class CommentFragment extends Fragment implements ColorPickerAdapter.TextColorPicker{
 
 
+    private static final int REQUEST_WRITE_EXTERNAL_STORAGE_PERMISSION_RESULT = 1403;
+
     //region Interface to setComments
     public interface SetCommentsOnVideo{
          void setComments();
@@ -60,7 +68,6 @@ public class CommentFragment extends Fragment implements ColorPickerAdapter.Text
 
 
     public static CommentFragment newInstance(VideoInfo videoInfo) {
-
         CommentFragment commentFragment = new CommentFragment();
         Bundle bundle = new Bundle();
         bundle.putSerializable("videoInfo",videoInfo);
@@ -72,11 +79,11 @@ public class CommentFragment extends Fragment implements ColorPickerAdapter.Text
     private EditText mEditText;
     private ImageButton mDone;
     private VideoInfo videoInfo;
-    private String timeStamp;
     private int color;
     private File bitFile;
     private RecyclerView recyclerView;
     private View rootView;
+    private Bitmap textImage;
     private ViewTreeObserver.OnGlobalLayoutListener globalLayoutListener;
     private SetCommentsOnVideo setCommentsOnVideo;
     private static final String TAG = CommentFragment.class.getSimpleName();
@@ -127,43 +134,34 @@ public class CommentFragment extends Fragment implements ColorPickerAdapter.Text
                     float fpixels = metrics.density * dp;
                     int pixels = (int) (fpixels + 0.5f);
                     textView.setTextSize(pixels);
-                    if(color!=0)
-                    textView.setTextColor(color);
+                    if (color != 0)
+                        textView.setTextColor(color);
                     else
                         textView.setTextColor(Color.RED);
                     textView.setText(comment);
                     textView.setTextAlignment(View.TEXT_ALIGNMENT_CENTER);
                     textView.setDrawingCacheEnabled(true);
-                    textView.measure(metrics.widthPixels,metrics.heightPixels);
+                    textView.measure(metrics.widthPixels, metrics.heightPixels);
                     int width = textView.getMeasuredWidth();
-                    textView.layout(0, 0,width,textView.getMeasuredHeight());
-                    Log.d(TAG,String.valueOf(bounds.width()));
-                    Log.d(TAG,String.valueOf(textView.getWidth()));
-                    Log.d(TAG,String.valueOf(bounds.height()));
-                    Bitmap textImage = Bitmap.createBitmap(textView.getDrawingCache(true));
-                    try {
-                        File bitmapFile = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_MOVIES);
-                        File mBitFolder = new File(bitmapFile, "Assignment Videos");
-                        if (!mBitFolder.exists()) {
-                           if(mBitFolder.mkdir()){
-                               Log.d("folder","created");
-                           }
+                    textView.layout(0, 0, width, textView.getMeasuredHeight());
+                    Log.d(TAG, String.valueOf(bounds.width()));
+                    Log.d(TAG, String.valueOf(textView.getWidth()));
+                    Log.d(TAG, String.valueOf(bounds.height()));
+                    textImage = Bitmap.createBitmap(textView.getDrawingCache(true));
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                        if (ContextCompat.checkSelfPermission(getContext(), Manifest.permission.WRITE_EXTERNAL_STORAGE)
+                                == PackageManager.PERMISSION_GRANTED) {
+                            saveBitmap(textImage);
+                        } else {
+                            if (ActivityCompat.shouldShowRequestPermissionRationale(getActivity(), Manifest.permission.WRITE_EXTERNAL_STORAGE)) {
+                                Toast.makeText(getContext(), "App need to save data", Toast.LENGTH_SHORT).show();
+                            }
+                            requestPermissions(new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE}, REQUEST_WRITE_EXTERNAL_STORAGE_PERMISSION_RESULT);
                         }
-                        timeStamp = new SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(new Date());
-                        String prepend = "Bitmap" + timeStamp + "_";
-                        try {
-                            bitFile = File.createTempFile(prepend, ".png", mBitFolder);
-                        } catch (IOException e) {
-                            e.printStackTrace();
-                        }
-
-                        textImage.compress(Bitmap.CompressFormat.PNG,100,new FileOutputStream(bitFile));
-                        videoInfo.setCommentPath(bitFile.getAbsolutePath());
-                        setCommentsOnVideo.setComments();
-                    } catch (FileNotFoundException e) {
-                        e.printStackTrace();
                     }
-                    getActivity().getSupportFragmentManager().popBackStackImmediate();
+                }
+                else {
+                    saveBitmap(textImage);
                 }
             }
         });
@@ -260,5 +258,44 @@ public class CommentFragment extends Fragment implements ColorPickerAdapter.Text
     }
     //endregion
 
+    public void saveBitmap(Bitmap textImage){
+        try {
+            File bitmapFile = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_MOVIES);
+            File mBitFolder = new File(bitmapFile, "Assignment Videos");
+            if (!mBitFolder.exists()) {
+                if (mBitFolder.mkdir()) {
+                    Log.d("folder", "created");
+                }
+            }
+            String timeStamp = new SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(new Date());
+            String prepend = "Bitmap" + timeStamp + "_";
+            try {
+                bitFile = File.createTempFile(prepend, ".png", mBitFolder);
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+
+            textImage.compress(Bitmap.CompressFormat.PNG, 100, new FileOutputStream(bitFile));
+            videoInfo.setCommentPath(bitFile.getAbsolutePath());
+            setCommentsOnVideo.setComments();
+        } catch (FileNotFoundException e) {
+            Log.e("exception","file cannot be found",e);
+        }
+        getActivity().getSupportFragmentManager().popBackStackImmediate();
+    }
+
+    @Override
+    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+        if(requestCode == REQUEST_WRITE_EXTERNAL_STORAGE_PERMISSION_RESULT){
+            if(grantResults[0] == PackageManager.PERMISSION_GRANTED){
+                saveBitmap(textImage);
+            }
+            else{
+                requestPermissions(new String[] {Manifest.permission.WRITE_EXTERNAL_STORAGE},
+                        REQUEST_WRITE_EXTERNAL_STORAGE_PERMISSION_RESULT) ;
+            }
+        }
+    }
 }
 

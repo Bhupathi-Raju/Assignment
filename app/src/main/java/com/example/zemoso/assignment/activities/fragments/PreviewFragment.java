@@ -10,7 +10,9 @@ import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Environment;
+import android.support.annotation.NonNull;
 import android.support.v4.app.Fragment;
+import android.support.v4.app.FragmentManager;
 import android.support.v4.content.ContextCompat;
 import android.util.DisplayMetrics;
 import android.util.Log;
@@ -90,7 +92,6 @@ public class PreviewFragment extends Fragment{
     //region Variables
     private static final int REQUEST_WRITE_EXTERNAL_STORAGE_PERMISSION_RESULT = 0;
     private SimpleExoPlayer exoPlayer;
-    private Realm bgRealm;
     private ImageButton save;
     private VideoInfo videoInfo = new VideoInfo();
     private Long mCurrentPosition = null;
@@ -250,8 +251,7 @@ public class PreviewFragment extends Fragment{
             @Override
             public void onClick(View view) {
                 Log.d(TAG,"saved");
-                saveVideoToGallery();
-                getActivity().getSupportFragmentManager().popBackStack("gallery",0);
+                askPermission();
             }
         });
 
@@ -454,39 +454,11 @@ public class PreviewFragment extends Fragment{
    //endregion
 
     //region saving Video
-    private void saveVideoToGallery() {
-        String timeStamp = null;
-        saved = 1;
+    private void askPermission() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
             if (ContextCompat.checkSelfPermission(getContext(), Manifest.permission.WRITE_EXTERNAL_STORAGE)
                     == PackageManager.PERMISSION_GRANTED) {
-                File movieFile = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_MOVIES);
-                File mVideoFolder = new File(movieFile, "Assignment Videos");
-                if (!mVideoFolder.exists()) {
-                   if(mVideoFolder.mkdir()){
-                       Log.d("folder","created");
-                   }
-                }
-                timeStamp = new SimpleDateFormat("yyyyMMdd_HHmmss", Locale.US).format(new Date());
-                String prepend = "VIDEO" + timeStamp + "_";
-                try {
-                    videoFile = File.createTempFile(prepend, ".mp4", mVideoFolder);
-                }
-                catch (IOException e) {
-                    e.printStackTrace();
-                }
-                try {
-                    InputStream in = new FileInputStream(new File(videoFileName));
-                    OutputStream out = new FileOutputStream(videoFile);
-                    byte[] buf = new byte[1024];
-                    int len;
-                    while ((len = in.read(buf)) > 0) {
-                        out.write(buf, 0, len);
-                    }
-                }
-                catch (IOException e) {
-                    Log.e("exception","Unable to read file",e);
-                }
+               saveVideoToGallery();
             }
             else {
                 if (shouldShowRequestPermissionRationale(Manifest.permission.WRITE_EXTERNAL_STORAGE)) {
@@ -496,41 +468,8 @@ public class PreviewFragment extends Fragment{
             }
         }
         else {
-            File movieFile = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_MOVIES);
-            File mVideoFolder = new File(movieFile, "Assignment Videos");
-            if (!mVideoFolder.exists()) {
-                if(mVideoFolder.mkdir()){
-                    Log.d("folder","created");
-                }
-            }
-            timeStamp = new SimpleDateFormat("yyyyMMdd_HHmmss",Locale.getDefault()).format(new Date());
-            String prepend = "VIDEO" + timeStamp + "_";
-            try {
-                videoFile = File.createTempFile(prepend, ".mp4", mVideoFolder);
-            }
-            catch (IOException e) {
-                Log.d("exception","unable to create file",e);
-            }
-            try {
-                InputStream in = new FileInputStream(new File(videoFileName));
-                OutputStream out = new FileOutputStream(videoFile);
-                byte[] buf = new byte[1024];
-                int len;
-                while ((len = in.read(buf)) > 0) {
-                    out.write(buf, 0, len);
-                }
-            }
-            catch (IOException e) {
-                Log.d("exception","unable to read file",e);
-            }
+              saveVideoToGallery();
         }
-        bgRealm  = Realm.getDefaultInstance();
-        videoInfo.setVideoPath(videoFile.getAbsolutePath());
-        videoInfo.setId(timeStamp);
-        bgRealm.beginTransaction();
-        bgRealm.insertOrUpdate(videoInfo);
-        bgRealm.commitTransaction();
-        Log.d("realm",bgRealm.where(VideoInfo.class).findAll().toString());
     }
     //endregion
 
@@ -570,4 +509,60 @@ public class PreviewFragment extends Fragment{
         }
     }
     //endregion
+
+
+    @Override
+    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+        if(requestCode == REQUEST_WRITE_EXTERNAL_STORAGE_PERMISSION_RESULT)
+        {
+            if(grantResults[0]==PackageManager.PERMISSION_GRANTED){
+                saveVideoToGallery();
+            }
+            else{
+                requestPermissions(new String[] {Manifest.permission.WRITE_EXTERNAL_STORAGE},
+                        REQUEST_WRITE_EXTERNAL_STORAGE_PERMISSION_RESULT);
+            }
+        }
+    }
+
+    public void saveVideoToGallery(){
+        String timeStamp = null;
+        saved = 1;
+        File movieFile = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_MOVIES);
+        File mVideoFolder = new File(movieFile, "Assignment Videos");
+        if (!mVideoFolder.exists()) {
+            if(mVideoFolder.mkdir()){
+                Log.d("folder","created");
+            }
+        }
+        timeStamp = new SimpleDateFormat("yyyyMMdd_HHmmss",Locale.getDefault()).format(new Date());
+        String prepend = "VIDEO" + timeStamp + "_";
+        try {
+            videoFile = File.createTempFile(prepend, ".mp4", mVideoFolder);
+        }
+        catch (IOException e) {
+            Log.d("exception","unable to create file",e);
+        }
+        try {
+            InputStream in = new FileInputStream(new File(videoFileName));
+            OutputStream out = new FileOutputStream(videoFile);
+            byte[] buf = new byte[1024];
+            int len;
+            while ((len = in.read(buf)) > 0) {
+                out.write(buf, 0, len);
+            }
+        }
+        catch (IOException e) {
+            Log.d("exception","unable to read file",e);
+        }
+        Realm  bgRealm  = Realm.getDefaultInstance();
+        videoInfo.setVideoPath(videoFile.getAbsolutePath());
+        videoInfo.setId(timeStamp);
+        bgRealm.beginTransaction();
+        bgRealm.insertOrUpdate(videoInfo);
+        bgRealm.commitTransaction();
+        Log.d("realm",bgRealm.where(VideoInfo.class).findAll().toString());
+        getActivity().getSupportFragmentManager().popBackStack("gallery", 0);
+    }
 }

@@ -4,6 +4,7 @@ import android.os.Bundle;
 import android.support.v4.app.Fragment;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
+import android.util.Log;
 import android.view.View;
 import android.view.Window;
 import android.view.WindowManager;
@@ -70,6 +71,17 @@ public class MainActivity extends AppCompatActivity implements
         bgRealm.close();
     }
 
+    @Override
+    public void onBackPressed() {
+       int count =  getSupportFragmentManager().getBackStackEntryCount();
+        if(count ==1){
+            finish();
+        }
+        else {
+            super.onBackPressed();
+        }
+    }
+
     //endregion
 
     //region Interface Methods
@@ -99,5 +111,6 @@ public class MainActivity extends AppCompatActivity implements
     public void showSupportActionBar() {
         getSupportActionBar().show();
     }
+
     //endregion
 }

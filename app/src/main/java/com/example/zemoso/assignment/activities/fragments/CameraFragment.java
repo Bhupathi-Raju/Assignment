@@ -162,7 +162,6 @@ public class CameraFragment extends Fragment {
     private void setupCamera(int width, int height) {
         CameraManager mCameraManager = (CameraManager) getContext().getSystemService(CAMERA_SERVICE);
         try {
-               String[] cameraIdList = mCameraManager.getCameraIdList();
             for (String cameraId : mCameraManager.getCameraIdList()) {
                 CameraCharacteristics cameraCharacteristics = mCameraManager.getCameraCharacteristics(cameraId);
                 Integer lensFacing = cameraCharacteristics.get(CameraCharacteristics.LENS_FACING);
@@ -195,9 +194,8 @@ public class CameraFragment extends Fragment {
         if(requestCode == REQUEST_CAMERA_PERMISSION_RESULT){
             if(grantResults[0] != PackageManager.PERMISSION_GRANTED){
                 Toast.makeText(getContext(),"You cannot use this app",Toast.LENGTH_SHORT).show();
-            }
-            if(grantResults[1] != PackageManager.PERMISSION_GRANTED){
-                Toast.makeText(getContext(),"app doesn't record audio",Toast.LENGTH_SHORT).show();
+                requestPermissions(new String[] {Manifest.permission.CAMERA,Manifest.permission.RECORD_AUDIO}
+                ,REQUEST_CAMERA_PERMISSION_RESULT);
             }
         }
     }
@@ -207,12 +205,14 @@ public class CameraFragment extends Fragment {
         try {
              if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
                 if(ContextCompat.checkSelfPermission(getActivity(),Manifest.permission.CAMERA)==
-                         PackageManager.PERMISSION_GRANTED && ContextCompat.checkSelfPermission(
-                                 getActivity(),Manifest.permission.RECORD_AUDIO)==PackageManager.PERMISSION_GRANTED){
+                         PackageManager.PERMISSION_GRANTED &&
+                        ContextCompat.checkSelfPermission(getActivity(),Manifest.permission.RECORD_AUDIO)
+                                ==PackageManager.PERMISSION_GRANTED){
                     cameraManager.openCamera(mCameraId, mCameraDeviceStateCallback, mBackgroundHandler);
                 }
                 else{
-                    if(shouldShowRequestPermissionRationale(Manifest.permission.CAMERA)){
+                    if(shouldShowRequestPermissionRationale(Manifest.permission.CAMERA)||
+                            shouldShowRequestPermissionRationale(Manifest.permission.RECORD_AUDIO)){
                         Toast.makeText(getActivity(),"Requires Access to Camera",Toast.LENGTH_SHORT).show();
                     }
                     else {
